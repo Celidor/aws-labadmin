@@ -1,5 +1,6 @@
 # Cloud Custodian subdirectories
 /access-key-delete-*/*
+/aws-security-delete-*/*
 
 # Other
 .DS_Store

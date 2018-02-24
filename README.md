@@ -5,6 +5,8 @@ Scripts for administration of AWS security labs
 This script performs the following actions:
 * Deletes access keys from users in named groups
 * Deletes MFA devices from users csa1 - csa14
+* Terminates EC2 instances built from the aws-security repository
+* Deletes ELBs built from the aws-security repository
 
 # usage
 After cloning the repository:
