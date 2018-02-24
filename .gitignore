@@ -1,0 +1,5 @@
+# Cloud Custodian subdirectories
+/access-key-delete-*/*
+
+# Other
+.DS_Store

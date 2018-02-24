@@ -1,0 +1,29 @@
+#dry run test: custodian run --dryrun -s. --region=us-east-1 --profile=celidor --cache-period=0 access_key_delete.yml
+policies:
+  - name: access-key-delete-devsecops
+    resource: iam-user
+    filters:
+      - filters:
+      - type: group
+        key: 'GroupName'
+        value: 'DevSecOps'
+    actions:
+      - type: remove-keys
+  - name: access-key-delete-csa
+    resource: iam-user
+    filters:
+      - filters:
+      - type: group
+        key: 'GroupName'
+        value: 'CSA'
+    actions:
+      - type: remove-keys
+  - name: access-key-delete-securityaudit
+    resource: iam-user
+    filters:
+      - filters:
+      - type: group
+        key: 'GroupName'
+        value: 'security-audit'
+    actions:
+      - type: remove-keys
