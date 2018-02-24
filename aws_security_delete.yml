@@ -1,0 +1,14 @@
+#dry run test: custodian run --dryrun -s. --region=eu-west-1 --profile=celidor --cache-period=0 aws_security_delete.yml
+policies:
+  - name: aws-security-delete-ec2
+    resource: ec2
+    filters:
+      - "tag:Repository": present
+    actions:
+      - terminate
+  - name: aws-security-delete-elb
+    resource: elb
+    filters:
+      - "tag:Repository": present
+    actions:
+      - delete
