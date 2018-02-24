@@ -8,13 +8,10 @@ This script performs the following actions:
 
 # usage
 After cloning the repository:
+* edit the profile name in the scripts to match your AWS credentials file
 ```
 $ ./destroy-awslab.sh
 ```
-# warning
-This script may cause unintended actions
-Always test first using the dry_run option
-
 # prerequisites
 Minimum prerequisites
 * Linux based operating system
