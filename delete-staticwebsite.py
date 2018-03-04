@@ -27,13 +27,18 @@ class s3:
     self.session = boto3.session.Session(profile_name=self.profile)
     self.client = self.session.client('s3')
     buckets = self.client.list_buckets()['Buckets']
+    #print json.dumps(buckets, sort_keys=True, indent=2, default=json_serial)
     for bucket in buckets:
-        if bucket['Name'].startswith('csa'):
+        if bucket['Name'].startswith('www'):
             print "Deleting objects in S3 bucket %s" % (bucket['Name'])
-            bucketobjects = self.client.list_objects_v2(bucket=bucket)
+            bucketobjects = self.client.list_objects_v2(Bucket=bucket['Name'])['Contents']
+            #print json.dumps(bucketobjects, sort_keys=True, indent=2, default=json_serial)
             for bucketobject in bucketobjects:
                 if self.dry_run is None:
-                    self.client.delete_object(Name=bucketobject['Name'])
+                    self.client.delete_object(Bucket=bucket['Name'],Key=bucketobject['Key'])
+            print "Deleting S3 bucket %s" % (bucket['Name'])
+            if self.dry_run is None:
+                self.client.delete_bucket(Bucket=bucket['Name'])
 
 class cloudformation:
   def __init__(self, profile, dry_run):
@@ -43,7 +48,14 @@ class cloudformation:
     print "Searching for CloudFormation stacks in us-east-1 region"
     self.session = boto3.session.Session(profile_name=self.profile, region_name='us-east-1')
     self.client = self.session.client('cloudformation', region_name='us-east-1')
-    stacks = self.client.list_stacks()['StackSummaries']
+    stacks = self.client.list_stacks(StackStatusFilter=[
+        'CREATE_IN_PROGRESS','CREATE_FAILED','CREATE_COMPLETE','ROLLBACK_IN_PROGRESS',
+        'ROLLBACK_FAILED','ROLLBACK_COMPLETE','DELETE_FAILED',
+        'UPDATE_IN_PROGRESS','UPDATE_COMPLETE_CLEANUP_IN_PROGRESS','UPDATE_COMPLETE',
+        'UPDATE_ROLLBACK_IN_PROGRESS','UPDATE_ROLLBACK_FAILED',
+        'UPDATE_ROLLBACK_COMPLETE_CLEANUP_IN_PROGRESS','UPDATE_ROLLBACK_COMPLETE',
+        'REVIEW_IN_PROGRESS',])['StackSummaries']
+    print json.dumps(stacks, sort_keys=True, indent=2, default=json_serial)
     for stack in stacks:
         if stack['StackName'].startswith('csa'):
             print "Deleting CloudFormation stack %s in us-east-1 region" % (stack['StackName'])
