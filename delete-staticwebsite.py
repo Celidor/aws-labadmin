@@ -1,6 +1,6 @@
 #!/usr/bin/env python
-#initiate from destroy-custodian script
-#for testing: python delete-cn7.py --profile celidor --dry_run
+#initiate from destroy-awslab script
+#for testing: python delete-staticwebsite.py --profile celidor --dry_run
 import boto3
 import sys
 import time
