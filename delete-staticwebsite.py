@@ -29,7 +29,7 @@ class s3:
     buckets = self.client.list_buckets()['Buckets']
     #print json.dumps(buckets, sort_keys=True, indent=2, default=json_serial)
     for bucket in buckets:
-        if bucket['Name'].startswith('www'):
+        if bucket['Name'].startswith('csa'):
             print "Deleting objects in S3 bucket %s" % (bucket['Name'])
             bucketobjects = self.client.list_objects_v2(Bucket=bucket['Name'])['Contents']
             #print json.dumps(bucketobjects, sort_keys=True, indent=2, default=json_serial)
@@ -55,7 +55,7 @@ class cloudformation:
         'UPDATE_ROLLBACK_IN_PROGRESS','UPDATE_ROLLBACK_FAILED',
         'UPDATE_ROLLBACK_COMPLETE_CLEANUP_IN_PROGRESS','UPDATE_ROLLBACK_COMPLETE',
         'REVIEW_IN_PROGRESS',])['StackSummaries']
-    print json.dumps(stacks, sort_keys=True, indent=2, default=json_serial)
+    #print json.dumps(stacks, sort_keys=True, indent=2, default=json_serial)
     for stack in stacks:
         if stack['StackName'].startswith('csa'):
             print "Deleting CloudFormation stack %s in us-east-1 region" % (stack['StackName'])
