@@ -40,6 +40,25 @@ class ec2:
                 print "waiting for instance termination.."
                 time.sleep(5)
 
+    sgs = self.client.describe_security_groups()['SecurityGroups']
+    for sg in sgs:
+      if sg['GroupName'].startswith('jenkins'):
+        #print "=========="
+        #print json.dumps(sg, sort_keys=True, indent=2, default=json_serial)
+        #print "=========="
+        print "Deleting sg %s" % sg['GroupName']
+        if self.dry_run is None:
+          for i in xrange(0, 20):
+            try:
+              self.client.delete_security_group(GroupId=sg['GroupId'])
+              print "deleted security group %s" % sg['GroupName']
+              break
+            except ClientError as e:
+              print "retrying: (error: %s)" % e
+              time.sleep(10)
+              continue
+
+
 class elb:
   def __init__(self, profile, region, dry_run):
 
