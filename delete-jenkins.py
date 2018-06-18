@@ -18,6 +18,25 @@ def json_serial(obj):
         return serial
     raise TypeError("Type not serializable")
 
+class elb:
+  def __init__(self, profile, region, dry_run):
+
+    self.profile = profile
+    self.dry_run = dry_run
+
+    self.session = boto3.session.Session(profile_name=self.profile)
+    self.client = self.session.client('elbv2', region_name=region)
+
+    elbs = self.client.describe_load_balancers()['LoadBalancers']
+    #print json.dumps(elbs, sort_keys=True, indent=2, default=json_serial)
+
+    for elb in elbs:
+      if elb['LoadBalancerName'].startswith('jenkins'):
+        #print json.dumps(elb, sort_keys=True, indent=2, default=json_serial)
+        print "Deleting elb %s" % elb['LoadBalancerName']
+        if self.dry_run is None:
+          self.client.delete_load_balancer(LoadBalancerArn=elb['LoadBalancerArn'])
+
 class ec2:
   def __init__(self, profile, region, dry_run):
 
@@ -57,26 +76,6 @@ class ec2:
               print "retrying: (error: %s)" % e
               time.sleep(10)
               continue
-
-
-class elb:
-  def __init__(self, profile, region, dry_run):
-
-    self.profile = profile
-    self.dry_run = dry_run
-
-    self.session = boto3.session.Session(profile_name=self.profile)
-    self.client = self.session.client('elbv2', region_name=region)
-
-    elbs = self.client.describe_load_balancers()['LoadBalancers']
-    #print json.dumps(elbs, sort_keys=True, indent=2, default=json_serial)
-
-    for elb in elbs:
-      if elb['LoadBalancerName'].startswith('jenkins'):
-        #print json.dumps(elb, sort_keys=True, indent=2, default=json_serial)
-        print "Deleting elb %s" % elb['LoadBalancerName']
-        if self.dry_run is None:
-          self.client.delete_load_balancer(LoadBalancerArn=elb['LoadBalancerArn'])
 
 class iam:
   def __init__(self, profile, dry_run):
@@ -120,15 +119,14 @@ class iam:
           if policy['PolicyName'].startswith('jenkins'):
             print "Delete policy %s" % (policy['PolicyArn'])
           if self.dry_run is None:
-            self.client.Policy.delete(PolicyArn=policy['PolicyArn'])
+            self.client.delete_policy(PolicyArn=policy['PolicyArn'])
         for instanceprofile in role['InstanceProfileList']:
           print "Remove role %s from instance profile %s" % (role['RoleName'], instanceprofile['InstanceProfileName'])
           if self.dry_run is None:
             self.client.remove_role_from_instance_profile(InstanceProfileName=instanceprofile['InstanceProfileName'], RoleName=role['RoleName'])
-        for instanceprofile in role['InstanceProfileList']:
-          print "Deleting instance profile %s" % (instanceprofile['InstanceProfileName'])
+          print "Delete instance profile %s" % (instanceprofile['InstanceProfileName'])
           if self.dry_run is None:
-            self.client.InstanceProfile.delete(Name=instanceprofile['InstanceProfileName'])
+            self.client.delete_instance_profile(Name=instanceprofile['InstanceProfileName'])
         print "Delete role %s" % role['RoleName']
         if self.dry_run is None:
           self.client.delete_role(RoleName=role['RoleName'])
@@ -147,6 +145,6 @@ if __name__ == "__main__":
   region = args.region
   dry_run = args.dry_run
 
-  ec2(profile, region, dry_run)
   elb(profile, region, dry_run)
+  ec2(profile, region, dry_run)
   iam(profile, dry_run)
