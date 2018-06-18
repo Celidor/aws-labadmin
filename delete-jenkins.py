@@ -126,7 +126,7 @@ class iam:
             self.client.remove_role_from_instance_profile(InstanceProfileName=instanceprofile['InstanceProfileName'], RoleName=role['RoleName'])
           print "Delete instance profile %s" % (instanceprofile['InstanceProfileName'])
           if self.dry_run is None:
-            self.client.delete_instance_profile(Name=instanceprofile['InstanceProfileName'])
+            self.client.delete_instance_profile(InstanceProfileName=instanceprofile['InstanceProfileName'])
         print "Delete role %s" % role['RoleName']
         if self.dry_run is None:
           self.client.delete_role(RoleName=role['RoleName'])
