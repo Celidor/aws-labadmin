@@ -96,13 +96,13 @@ class iam:
     #print json.dumps(response, sort_keys=True, indent=2, default=json_serial)
 
     allroles    = response['RoleDetailList']
-    allusers    = response['UserDetailList']
+    allpolicies = response['Policies']
 
     while response['IsTruncated'] == True:
       marker = response['Marker']
       response = self.client.get_account_authorization_details(Marker=marker)
       allroles.extend(response['RoleDetailList'])
-      allusers.extend(response['UserDetailList'])
+      allpolicies.extend(response['Policies'])
 
     for role in allroles:
       if role['RoleName'].startswith('jenkins'):
@@ -115,7 +115,7 @@ class iam:
           print "Detach policy %s from role %s" % (policy['PolicyArn'], role['RoleName'])
           if self.dry_run is None:
             self.client.detach_role_policy(RoleName=role['RoleName'], PolicyArn=policy['PolicyArn'])
-        for policy in role['AttachedManagedPolicies']:
+        for policy in policies:
           if policy['PolicyName'].startswith('jenkins'):
             print "Delete policy %s" % (policy['PolicyArn'])
           if self.dry_run is None:
