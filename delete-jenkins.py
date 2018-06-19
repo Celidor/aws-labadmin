@@ -24,6 +24,8 @@ class elb:
     self.profile = profile
     self.dry_run = dry_run
 
+    print "Searching for ELBs"
+
     self.session = boto3.session.Session(profile_name=self.profile)
     self.client = self.session.client('elbv2', region_name=region)
 
@@ -44,6 +46,7 @@ class ec2:
     self.dry_run = dry_run
 
     print "Searching for ec2 resources"
+
     self.session = boto3.session.Session(profile_name=self.profile)
     self.client = self.session.client('ec2', region_name=region)
 
@@ -92,8 +95,9 @@ class iam:
     allpolicies = []
     allusers = []
 
-    response = self.client.get_account_authorization_details(MaxItems=1000)
-    #print json.dumps(response, sort_keys=True, indent=2, default=json_serial)
+    response = self.client.get_account_authorization_details(Filter=[
+      'Role','LocalManagedPolicy','AWSManagedPolicy'],MaxItems=1000)
+    print json.dumps(response, sort_keys=True, indent=2, default=json_serial)
 
     allroles    = response['RoleDetailList']
     allpolicies = response['Policies']
@@ -115,11 +119,6 @@ class iam:
           print "Detach policy %s from role %s" % (policy['PolicyArn'], role['RoleName'])
           if self.dry_run is None:
             self.client.detach_role_policy(RoleName=role['RoleName'], PolicyArn=policy['PolicyArn'])
-        for policy in policies:
-          if policy['PolicyName'].startswith('jenkins'):
-            print "Delete policy %s" % (policy['PolicyArn'])
-          if self.dry_run is None:
-            self.client.delete_policy(PolicyArn=policy['PolicyArn'])
         for instanceprofile in role['InstanceProfileList']:
           print "Remove role %s from instance profile %s" % (role['RoleName'], instanceprofile['InstanceProfileName'])
           if self.dry_run is None:
@@ -131,6 +130,12 @@ class iam:
         if self.dry_run is None:
           self.client.delete_role(RoleName=role['RoleName'])
 
+    print "Searching for IAM policies"
+    for policy in allpolicies:
+      if policy['PolicyName'].startswith('jenkins'):
+        print "Delete policy %s" % (policy['Arn'])
+        if self.dry_run is None:
+          self.client.delete_policy(PolicyArn=policy['Arn'])
 
 if __name__ == "__main__":
 
