@@ -62,6 +62,53 @@ class cloudformation:
             if self.dry_run is None:
                 self.client.delete_stack(StackName=stack['StackName'])
 
+class iam:
+  def __init__(self, env, dry_run):
+
+    self.profile = profile
+    self.dry_run = dry_run
+
+    print "Searching for IAM roles"
+
+    self.session = boto3.session.Session(profile_name=self.profile)
+    self.client = self.session.client('iam')
+
+    allroles = []
+    allpolicies = []
+    allusers = []
+
+    response = self.client.get_account_authorization_details(MaxItems=1000)
+    #print json.dumps(response, sort_keys=True, indent=2, default=json_serial)
+
+    allroles = response['RoleDetailList']
+    allusers = response['UserDetailList']
+
+    while response['IsTruncated'] == True:
+      marker = response['Marker']
+      response = self.client.get_account_authorization_details(Marker=marker)
+      allroles.extend(response['RoleDetailList'])
+      allusers.extend(response['UserDetailList'])
+
+    for role in allroles:
+      if role['RoleName'].startswith('serverless-training'):
+        #print json.dumps(role, sort_keys=True, indent=2, default=json_serial)
+        for role_policy in role ['RolePolicyList']:
+          print "Delete inline role policy %s from role %s" % (role_policy['PolicyName'], role['RoleName'])
+          if self.dry_run is None:
+            self.client.delete_role_policy(RoleName=role ['RoleName'], PolicyName= role_policy['PolicyName'])
+        for policy in role['AttachedManagedPolicies']:
+          print "Detach policy %s from role %s" % (policy['PolicyArn'], role['RoleName'])
+          if self.dry_run is None:
+            self.client.detach_role_policy(RoleName=role['RoleName'], PolicyArn=policy['PolicyArn'])
+        for ip in role['InstanceProfileList']:
+          print "Remove role %s from instance profile %s" % (role['RoleName'], ip['InstanceProfileName'])
+          if self.dry_run is None:
+            self.client.remove_role_from_instance_profile(InstanceProfileName=ip['InstanceProfileName'], RoleName=role['RoleName'])
+        print "Delete role %s" % role['RoleName']
+        if self.dry_run is None:
+          self.client.delete_role(RoleName=role['RoleName'])
+
+
 if __name__ == "__main__":
 
   parser = argparse.ArgumentParser(description="Delete AWS Lab")
@@ -73,3 +120,4 @@ if __name__ == "__main__":
 
   s3(profile, dry_run)
   cloudformation(profile, dry_run)
+  iam(profile, dry_run)
