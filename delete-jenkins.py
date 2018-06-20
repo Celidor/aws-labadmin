@@ -95,8 +95,7 @@ class iam:
     allpolicies = []
     allusers = []
 
-    response = self.client.get_account_authorization_details(Filter=[
-      'Role','LocalManagedPolicy','AWSManagedPolicy'],MaxItems=1000)
+    response = self.client.get_account_authorization_details(MaxItems=1000)
     #print json.dumps(response, sort_keys=True, indent=2, default=json_serial)
 
     allroles    = response['RoleDetailList']
