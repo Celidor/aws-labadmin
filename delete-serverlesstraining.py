@@ -29,7 +29,7 @@ class s3:
     buckets = self.client.list_buckets()['Buckets']
     #print json.dumps(buckets, sort_keys=True, indent=2, default=json_serial)
     for bucket in buckets:
-        if bucket['Name'].startswith('serverless-training'):
+        if bucket['Name'].startswith('serverless-'):
             print "Deleting objects in S3 bucket %s" % (bucket['Name'])
             bucketobjects = self.client.list_objects_v2(Bucket=bucket['Name'])['Contents']
             #print json.dumps(bucketobjects, sort_keys=True, indent=2, default=json_serial)
@@ -45,8 +45,8 @@ class cloudformation:
     self.profile = profile
     self.dry_run = dry_run
 
-    print "Searching for CloudFormation stacks in eu-west-1 region"
-    self.session = boto3.session.Session(profile_name=self.profile, region_name='eu-west-1')
+    print "Searching for CloudFormation stacks in us-east-1 region"
+    self.session = boto3.session.Session(profile_name=self.profile, region_name='us-east-1')
     self.client = self.session.client('cloudformation', region_name='eu-west-1')
     stacks = self.client.list_stacks(StackStatusFilter=[
         'CREATE_IN_PROGRESS','CREATE_FAILED','CREATE_COMPLETE','ROLLBACK_IN_PROGRESS',
@@ -57,7 +57,7 @@ class cloudformation:
         'REVIEW_IN_PROGRESS',])['StackSummaries']
     #print json.dumps(stacks, sort_keys=True, indent=2, default=json_serial)
     for stack in stacks:
-        if stack['StackName'].startswith('serverless-training'):
+        if stack['StackName'].startswith('serverless-'):
             print "Deleting CloudFormation stack %s in eu-west-1 region" % (stack['StackName'])
             if self.dry_run is None:
                 self.client.delete_stack(StackName=stack['StackName'])
@@ -90,7 +90,7 @@ class iam:
       allusers.extend(response['UserDetailList'])
 
     for role in allroles:
-      if role['RoleName'].startswith('serverless-training'):
+      if role['RoleName'].startswith('serverless-'):
         #print json.dumps(role, sort_keys=True, indent=2, default=json_serial)
         for role_policy in role ['RolePolicyList']:
           print "Delete inline role policy %s from role %s" % (role_policy['PolicyName'], role['RoleName'])
