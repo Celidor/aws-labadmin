@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #initiate from destroy-awslab script
-#for testing: python delete-jenkis.py --profile celidor --region eu-west-1 --dry_run
+#for testing: python delete-jenkins.py --profile celidor --region eu-west-1 --dry_run
 import boto3
 import sys
 import time
@@ -79,6 +79,26 @@ class ec2:
               print "retrying: (error: %s)" % e
               time.sleep(10)
               continue
+
+    igs = self.client.describe_internet_gateways()['InternetGateways']
+    vpcs = self.client.describe_vpcs()['Vpcs']
+
+    for ig in igs:
+      if "Tags" in ig:
+        for tag in ig['Tags']:
+          if tag['Key'] == "Name" and tag['Value'].startswith('jenkins'):
+            print "Deleting ig %s" % ig['InternetGatewayId']
+            if self.dry_run is None:
+              self.client.detach_internet_gateway(InternetGatewayId=ig['InternetGatewayId'], VpcId=vpc['VpcId'])
+              self.client.delete_internet_gateway(InternetGatewayId=ig['InternetGatewayId'])
+
+    for vpc in vpcs:
+      if "Tags" in vpc:
+        for tag in vpc['Tags']:
+          if tag['Key'] == "Name" and tag['Value'].startswith('jenkins'):
+            print "Deleting vpc %s" % vpc['VpcId']
+            if self.dry_run is None:
+              self.client.delete_vpc(VpcId=vpc['VpcId'])
 
 class iam:
   def __init__(self, profile, dry_run):
