@@ -9,12 +9,19 @@ This script performs the following actions:
 * Terminates EC2 instances built from the aws-security repository
 * Deletes ELBs built from the aws-security repository
 
-# usage
+# usage - general
 After cloning the repository:
 * edit the profile name in the scripts to match your AWS credentials file
 ```
 $ ./destroy-awslab.sh
 ```
+# usage - DevSecOps Serverless Lab
+Example for profile "celidor":
+```
+python delete-serverlesstraining.py --profile celidor --dry_run --dry_run
+python delete-serverlesstraining.py --profile celidor --dry_run
+```
+
 # prerequisites
 Minimum prerequisites
 * Linux based operating system
