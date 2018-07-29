@@ -50,55 +50,106 @@ class ec2:
     self.session = boto3.session.Session(profile_name=self.profile)
     self.client = self.session.client('ec2', region_name=region)
 
-    instances = self.client.describe_instances()['Reservations']
-    #print json.dumps(instances, sort_keys=True, indent=2, default=json_serial)
-    for inc in instances:
-      for instance in inc['Instances']:
-        if instance['KeyName'].startswith('jenkins'):
-            print "Terminating instance %s" % instance['InstanceId']
-            if self.dry_run is None:
-              self.client.terminate_instances(InstanceIds=[ instance['InstanceId'] ])
-              while self.client.describe_instances(InstanceIds=[ instance['InstanceId'] ])['Reservations'][0]['Instances'][0]['State']['Name'] != 'terminated':
-                print "waiting for instance termination.."
-                time.sleep(5)
-
-    sgs = self.client.describe_security_groups()['SecurityGroups']
-    for sg in sgs:
-      if sg['GroupName'].startswith('jenkins'):
-        #print "=========="
-        #print json.dumps(sg, sort_keys=True, indent=2, default=json_serial)
-        #print "=========="
-        print "Deleting sg %s" % sg['GroupName']
-        if self.dry_run is None:
-          for i in xrange(0, 20):
-            try:
-              self.client.delete_security_group(GroupId=sg['GroupId'])
-              print "deleted security group %s" % sg['GroupName']
-              break
-            except ClientError as e:
-              print "retrying: (error: %s)" % e
-              time.sleep(10)
-              continue
-
     igs = self.client.describe_internet_gateways()['InternetGateways']
     vpcs = self.client.describe_vpcs()['Vpcs']
-
-    for ig in igs:
-      if "Tags" in ig:
-        for tag in ig['Tags']:
-          if tag['Key'] == "Name" and tag['Value'].startswith('jenkins'):
-            print "Deleting ig %s" % ig['InternetGatewayId']
-            if self.dry_run is None:
-              self.client.detach_internet_gateway(InternetGatewayId=ig['InternetGatewayId'], VpcId=vpc['VpcId'])
-              self.client.delete_internet_gateway(InternetGatewayId=ig['InternetGatewayId'])
 
     for vpc in vpcs:
       if "Tags" in vpc:
         for tag in vpc['Tags']:
           if tag['Key'] == "Name" and tag['Value'].startswith('jenkins'):
-            print "Deleting vpc %s" % vpc['VpcId']
-            if self.dry_run is None:
-              self.client.delete_vpc(VpcId=vpc['VpcId'])
+            ngws = self.client.describe_nat_gateways(Filters=[{'Name': 'vpc-id', 'Values': [ vpc['VpcId'] ] } ])['NatGateways']
+            for ngw in ngws:
+              print "Deleting ngw %s" % ngw['NatGatewayId']
+              if self.dry_run is None:
+                self.client.delete_nat_gateway(NatGatewayId=ngw['NatGatewayId'])
+
+            insts = self.client.describe_instances(Filters=[{'Name': 'vpc-id', 'Values': [ vpc['VpcId'] ] }, {'Name':'instance-state-name', 'Values':[ 'running' ]}])['Reservations']
+            #print json.dumps(insts, sort_keys=True, indent=2, default=json_serial)
+            for inc in insts:
+              for inst in inc['Instances']:
+                print "Terminating instance %s" % inst['InstanceId']
+                if self.dry_run is None:
+                  self.client.terminate_instances(InstanceIds=[ inst['InstanceId'] ])
+                  while self.client.describe_instances(InstanceIds=[ inst['InstanceId'] ])['Reservations'][0]['Instances'][0]['State']['Name'] != 'terminated':                        print "waiting for instance termination.."
+                time.sleep(5)
+                time.sleep(20)
+
+            acls = self.client.describe_network_acls(Filters=[{'Name': 'vpc-id', 'Values': [ vpc['VpcId'] ] } ])['NetworkAcls']
+            for acl in acls:
+              if acl['IsDefault'] != True:
+                print "Deleting network acl %s" % acl['NetworkAclId']
+                if self.dry_run is None:
+                  self.client.delete_network_acl(NetworkAclId=acl['NetworkAclId'])
+
+            sgs = self.client.describe_security_groups(Filters=[{'Name': 'vpc-id', 'Values': [ vpc['VpcId'] ] } ])['SecurityGroups']
+            for sg in sgs:
+              if sg['GroupName'] != 'default':
+                #print "=========="
+                #print json.dumps(sg, sort_keys=True, indent=2, default=json_serial)
+                #print "=========="
+                print "Deleting sg %s" % sg['GroupName']
+                if self.dry_run is None:
+                  for i in xrange(0, 20):
+                    try:
+                      self.client.delete_security_group(GroupId=sg['GroupId'])
+                      print "deleted %s" % sg['GroupName']
+                      break
+                    except ClientError as e:
+                      print "retrying: (error: %s)" % e
+                      time.sleep(10)
+                      continue
+
+            for ig in igs:
+              for att in ig['Attachments']:
+                if att['VpcId'] == vpc['VpcId']:
+                  print "Deleting ig %s" % ig['InternetGatewayId']
+                  if self.dry_run is None:
+                    self.client.detach_internet_gateway(InternetGatewayId=ig['InternetGatewayId'], VpcId=vpc['VpcId'])
+                    self.client.delete_internet_gateway(InternetGatewayId=ig['InternetGatewayId'])
+
+            rts = self.client.describe_route_tables(Filters=[{'Name': 'vpc-id', 'Values': [ vpc['VpcId'] ] } ])['RouteTables']
+            for rt in rts:
+              #print "=========="
+              #print json.dumps(rt, sort_keys=True, indent=2, default=json_serial)
+              #print "=========="
+              for assoc in rt['Associations']:
+                if assoc['Main'] is not True:
+                  print "Dissassociating Route Table %s" % assoc['RouteTableAssociationId']
+                  if self.dry_run is None:
+                    self.client.disassociate_route_table(AssociationId=assoc['RouteTableAssociationId'])
+              for route in rt['Routes']:
+                if 'GatewayId' in route and route['GatewayId'] != 'local':
+                  print "Deleting route: %s (destination: %s)" % (rt['RouteTableId'], route['DestinationCidrBlock'])
+                  if self.dry_run is None:
+                    self.client.delete_route(RouteTableId=rt['RouteTableId'], DestinationCidrBlock=route['DestinationCidrBlock'])
+              myassoc = 0
+              for assoc in rt['Associations']:
+                if assoc['Main'] is True:
+                  myassoc = 1
+              if myassoc == 0:
+                print "Delete Route Table: %s" % rt['RouteTableId']
+                if self.dry_run is None:
+                  self.client.delete_route_table(RouteTableId=rt['RouteTableId'])
+              vpcp = self.client.describe_vpc_peering_connections(Filters=[{'Name': 'requester-vpc-info.vpc-id', 'Values': [ vpc['VpcId'] ]}])['VpcPeeringConnections']
+              if len(vpcp) > 0:
+                print "Delete vpc peering connection %s" % vpcp[0]['VpcPeeringConnectionId']
+                if self.dry_run is None:
+                  self.client.delete_vpc_peering_connection(VpcPeeringConnectionId=vpcp[0]['VpcPeeringConnectionId'])
+
+            subnets = self.client.describe_subnets(Filters=[{'Name': 'vpc-id', 'Values': [ vpc['VpcId'] ] } ])['Subnets']
+            for subnet in subnets:
+              print "Deleting subnet %s" % subnet['SubnetId']
+              #print json.dumps(subnet, sort_keys=True, indent=2, default=json_serial)
+              if self.dry_run is None:
+                self.client.delete_subnet(SubnetId=subnet['SubnetId'])
+
+        for vpc in vpcs:
+          if "Tags" in vpc:
+            for tag in vpc['Tags']:
+              if tag['Key'] == "Name" and tag['Value'].startswith('jenkins'):
+                print "Deleting vpc %s" % vpc['VpcId']
+                if self.dry_run is None:
+                  self.client.delete_vpc(VpcId=vpc['VpcId'])
 
 class iam:
   def __init__(self, profile, dry_run):
