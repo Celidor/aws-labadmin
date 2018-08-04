@@ -1,6 +1,7 @@
 #!/usr/bin/env python
-#initiate from destroy-awslab script
-#for testing: python delete-serverlesstraining.py --profile celidor --dry_run
+#optionally initiate from destroy-awslab script
+#dry run: python delete-serverlesstraining.py --profile celidor --region eu-west-1 --dry_run
+#usage: python delete-serverlesstraining.py --profile celidor --region eu-west-1
 import boto3
 import sys
 import time
@@ -19,13 +20,15 @@ def json_serial(obj):
     raise TypeError("Type not serializable")
 
 class s3:
-  def __init__(self, profile, dry_run):
+  def __init__(self, profile, region, dry_run):
     self.profile = profile
     self.dry_run = dry_run
 
+    self.session = boto3.session.Session(profile_name=self.profile, region_name=region)
+    self.client = self.session.client('s3',region_name=region)
+
     print "Searching for S3 buckets"
-    self.session = boto3.session.Session(profile_name=self.profile)
-    self.client = self.session.client('s3')
+
     buckets = self.client.list_buckets()['Buckets']
     #print json.dumps(buckets, sort_keys=True, indent=2, default=json_serial)
     for bucket in buckets:
@@ -41,13 +44,13 @@ class s3:
                 self.client.delete_bucket(Bucket=bucket['Name'])
 
 class cloudformation:
-  def __init__(self, profile, dry_run):
+  def __init__(self, profile, region, dry_run):
     self.profile = profile
     self.dry_run = dry_run
 
-    print "Searching for CloudFormation stacks in us-east-1 region"
-    self.session = boto3.session.Session(profile_name=self.profile, region_name='us-east-1')
-    self.client = self.session.client('cloudformation', region_name='us-east-1')
+    print "Searching for CloudFormation stacks"
+    self.session = boto3.session.Session(profile_name=self.profile, region_name=region)
+    self.client = self.session.client('cloudformation', region_name=region)
     stacks = self.client.list_stacks(StackStatusFilter=[
         'CREATE_IN_PROGRESS','CREATE_FAILED','CREATE_COMPLETE','ROLLBACK_IN_PROGRESS',
         'ROLLBACK_FAILED','ROLLBACK_COMPLETE','DELETE_FAILED',
@@ -113,11 +116,13 @@ if __name__ == "__main__":
 
   parser = argparse.ArgumentParser(description="Delete AWS Lab")
   parser.add_argument('--profile', required=True)
+  parser.add_argument('--region', required=True)
   parser.add_argument('--dry_run', action='count')
   args = parser.parse_args()
   profile = args.profile
+  region = args.region
   dry_run = args.dry_run
 
-  s3(profile, dry_run)
-  cloudformation(profile, dry_run)
+  s3(profile, region, dry_run)
+  cloudformation(profile, region, dry_run)
   iam(profile, dry_run)
