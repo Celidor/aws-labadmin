@@ -20,11 +20,11 @@ def json_serial(obj):
     raise TypeError("Type not serializable")
 
 class s3:
-  def __init__(self, profile, region, dry_run):
+  def __init__(self, profile, dry_run):
     self.profile = profile
     self.dry_run = dry_run
 
-    self.session = boto3.session.Session(profile_name=self.profile, region_name=region)
+    self.session = boto3.session.Session(profile_name=self.profile)
     self.client = self.session.client('s3',region_name=region)
 
     print "Searching for S3 buckets"
@@ -48,7 +48,7 @@ class cloudformation:
     self.profile = profile
     self.dry_run = dry_run
 
-    print "Searching for CloudFormation stacks"
+    print "Searching for CloudFormation stacks in " + region + " region"
     self.session = boto3.session.Session(profile_name=self.profile, region_name=region)
     self.client = self.session.client('cloudformation', region_name=region)
     stacks = self.client.list_stacks(StackStatusFilter=[
@@ -123,6 +123,6 @@ if __name__ == "__main__":
   region = args.region
   dry_run = args.dry_run
 
-  s3(profile, region, dry_run)
+  s3(profile, dry_run)
   cloudformation(profile, region, dry_run)
   iam(profile, dry_run)
