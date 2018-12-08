@@ -38,6 +38,17 @@ class elb:
         print "Deleting elb %s" % elb['LoadBalancerName']
         if self.dry_run is None:
           self.client.delete_load_balancer(LoadBalancerArn=elb['LoadBalancerArn'])
+          time.sleep(20)
+
+    targetgroups = self.client.describe_target_groups()['TargetGroups']
+    #print json.dumps(targetgroups, sort_keys=True, indent=2, default=json_serial)
+
+    for targetgroup in targetgroups:
+      if targetgroup['TargetGroupName'].startswith('jenkins'):
+        #print json.dumps(targetgroup, sort_keys=True, indent=2, default=json_serial)
+        print "Deleting target group %s" % targetgroup['TargetGroupName']
+        if self.dry_run is None:
+          self.client.delete_target_group(TargetGroupArn=targetgroup['TargetGroupArn'])
 
 class ec2:
   def __init__(self, profile, region, dry_run):
@@ -71,7 +82,7 @@ class ec2:
                 if self.dry_run is None:
                   self.client.terminate_instances(InstanceIds=[ inst['InstanceId'] ])
                   while self.client.describe_instances(InstanceIds=[ inst['InstanceId'] ])['Reservations'][0]['Instances'][0]['State']['Name'] != 'terminated':                        print "waiting for instance termination.."
-                time.sleep(5)
+                  time.sleep(5)
                 time.sleep(20)
 
             acls = self.client.describe_network_acls(Filters=[{'Name': 'vpc-id', 'Values': [ vpc['VpcId'] ] } ])['NetworkAcls']
@@ -149,7 +160,15 @@ class ec2:
               if tag['Key'] == "Name" and tag['Value'].startswith('jenkins'):
                 print "Deleting vpc %s" % vpc['VpcId']
                 if self.dry_run is None:
-                  self.client.delete_vpc(VpcId=vpc['VpcId'])
+                  for i in xrange(0, 20):
+                    try:
+                      self.client.delete_vpc(VpcId=vpc['VpcId'])
+                      print "deleted %s" % vpc['VpcId']
+                      break
+                    except ClientError as e:
+                      print "retrying: (error: %s)" % e
+                      time.sleep(10)
+                      continue
 
 class iam:
   def __init__(self, profile, dry_run):
