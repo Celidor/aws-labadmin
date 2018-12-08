@@ -169,6 +169,16 @@ class ec2:
                       print "retrying: (error: %s)" % e
                       time.sleep(10)
                       continue
+      
+    keypairs = self.client.describe_key_pairs()['KeyPairs']
+    #print json.dumps(keypairs, sort_keys=True, indent=2, default=json_serial)
+
+    for keypair in keypairs:
+      if keypair['KeyName'].startswith('jenkins'):
+        #print json.dumps(targetgroup, sort_keys=True, indent=2, default=json_serial)
+        print "Deleting key pair %s" % keypair['KeyName']
+        if self.dry_run is None:
+          self.client.delete_key_pair(KeyName=keypair['KeyName'])
 
 class iam:
   def __init__(self, profile, dry_run):
