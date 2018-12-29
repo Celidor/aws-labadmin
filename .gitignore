@@ -2,5 +2,8 @@
 /access-key-delete-*/*
 /aws-security-delete-*/*
 
+# Credentials
+user-passwords.sh
+
 # Other
 .DS_Store
