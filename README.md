@@ -31,6 +31,7 @@ After cloning the repository:
 PASSWORD_1="my-secure-password-for-user-1"
 PASSWORD_2="my-secure-password-for-user-2"
 ```
+* edit the create-users.sh script as appropriate
 * to create users and assign passwords:
 ```
 $ ./create-users.sh
