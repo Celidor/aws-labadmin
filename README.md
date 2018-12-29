@@ -22,6 +22,20 @@ python delete-serverlesstraining.py --profile celidor --dry_run --dry_run
 python delete-serverlesstraining.py --profile celidor --dry_run
 ```
 
+# Create AWS users
+After cloning the repository:
+* create a file user-passwords.sh with executable permissions
+* enter passwords to the file in the format below
+* ensure passwords comply with the account password policy
+```
+PASSWORD_1="my-secure-password-for-user-1"
+PASSWORD_2="my-secure-password-for-user-2"
+```
+* to create users and assign passwords:
+```
+$ ./create-users.sh
+```
+
 # prerequisites
 Minimum prerequisites
 * Linux based operating system
