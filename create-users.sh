@@ -6,7 +6,7 @@
 source user-passwords.sh
 ACCOUNTID=$(aws sts get-caller-identity --output text --query 'Account' --profile celidor)
 echo "Creating users for AWS Account ${ACCOUNTID}"
-for i in `seq 15 20`;
+for i in `seq 1 20`;
 do
   echo "creating user csa$i"
   aws iam create-user --user-name csa$i
