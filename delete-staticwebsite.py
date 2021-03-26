@@ -23,20 +23,20 @@ class s3:
     self.profile = profile
     self.dry_run = dry_run
 
-    print "Searching for S3 buckets"
+    print("Searching for S3 buckets")
     self.session = boto3.session.Session(profile_name=self.profile)
     self.client = self.session.client('s3')
     buckets = self.client.list_buckets()['Buckets']
     #print json.dumps(buckets, sort_keys=True, indent=2, default=json_serial)
     for bucket in buckets:
         if bucket['Name'].startswith('csa'):
-            print "Deleting objects in S3 bucket %s" % (bucket['Name'])
+            print("Deleting objects in S3 bucket %s" % (bucket['Name']))
             bucketobjects = self.client.list_objects_v2(Bucket=bucket['Name'])['Contents']
             #print json.dumps(bucketobjects, sort_keys=True, indent=2, default=json_serial)
             for bucketobject in bucketobjects:
                 if self.dry_run is None:
                     self.client.delete_object(Bucket=bucket['Name'],Key=bucketobject['Key'])
-            print "Deleting S3 bucket %s" % (bucket['Name'])
+            print("Deleting S3 bucket %s" % (bucket['Name']))
             if self.dry_run is None:
                 self.client.delete_bucket(Bucket=bucket['Name'])
 
@@ -45,7 +45,7 @@ class cloudformation:
     self.profile = profile
     self.dry_run = dry_run
 
-    print "Searching for CloudFormation stacks in us-east-1 region"
+    print("Searching for CloudFormation stacks in us-east-1 region")
     self.session = boto3.session.Session(profile_name=self.profile, region_name='us-east-1')
     self.client = self.session.client('cloudformation', region_name='us-east-1')
     stacks = self.client.list_stacks(StackStatusFilter=[
@@ -58,7 +58,7 @@ class cloudformation:
     #print json.dumps(stacks, sort_keys=True, indent=2, default=json_serial)
     for stack in stacks:
         if stack['StackName'].startswith('csa'):
-            print "Deleting CloudFormation stack %s in us-east-1 region" % (stack['StackName'])
+            print("Deleting CloudFormation stack %s in us-east-1 region" % (stack['StackName']))
             if self.dry_run is None:
                 self.client.delete_stack(StackName=stack['StackName'])
 
