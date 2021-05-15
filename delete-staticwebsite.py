@@ -27,15 +27,19 @@ class s3:
     self.session = boto3.session.Session(profile_name=self.profile)
     self.client = self.session.client('s3')
     buckets = self.client.list_buckets()['Buckets']
-    #print json.dumps(buckets, sort_keys=True, indent=2, default=json_serial)
+    #print(json.dumps(buckets, sort_keys=True, indent=2, default=json_serial))
     for bucket in buckets:
         if bucket['Name'].startswith('csa'):
             print("Deleting objects in S3 bucket %s" % (bucket['Name']))
-            bucketobjects = self.client.list_objects_v2(Bucket=bucket['Name'])['Contents']
-            #print json.dumps(bucketobjects, sort_keys=True, indent=2, default=json_serial)
-            for bucketobject in bucketobjects:
-                if self.dry_run is None:
-                    self.client.delete_object(Bucket=bucket['Name'],Key=bucketobject['Key'])
+
+            try:
+                bucketobjects = self.client.list_objects_v2(Bucket=bucket['Name'])['Contents']
+                #print(json.dumps(bucketobjects, sort_keys=True, indent=2, default=json_serial))
+                for bucketobject in bucketobjects:
+                    if self.dry_run is None:
+                        self.client.delete_object(Bucket=bucket['Name'],Key=bucketobject['Key'])
+            except KeyError:
+                pass
             print("Deleting S3 bucket %s" % (bucket['Name']))
             if self.dry_run is None:
                 self.client.delete_bucket(Bucket=bucket['Name'])
