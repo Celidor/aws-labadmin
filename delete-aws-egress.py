@@ -71,6 +71,18 @@ class ec2:
               if self.dry_run is None:
                 self.client.delete_network_interface(NetworkInterfaceId=nic['NetworkInterfaceId'])
 
+    endpoints = self.client.describe_vpc_endpoints()['VpcEndpoints']
+    for endpoint in endpoints:
+        if "Tags" in endpoint:
+          for tag in endpoint['Tags']:
+            if (tag['Key'] == "Name" and tag['Value'].startswith('aws-egress') and endpoint['State'] != 'deleted'):      
+              print("Deleting VPC Endpoint %s" % tag['Value'])
+              if self.dry_run is None:
+                self.client.delete_vpc_endpoints(VpcEndpointIds=[endpoint['VpcEndpointId']])
+                while self.client.describe_vpc_endpoints(VpcEndpointIds=[endpoint['VpcEndpointId']])['VpcEndpoints'][0]['State'] != 'deleted': print("waiting for VPC Endpoint deletion..")
+                time.sleep(5)
+              time.sleep(20)
+
     igs = self.client.describe_internet_gateways()['InternetGateways']
     vpcs = self.client.describe_vpcs()['Vpcs']
 
@@ -164,6 +176,24 @@ class ec2:
                       time.sleep(10)
                       continue
 
+class autoscaling:
+  def __init__(self, profile, region, dry_run):
+
+    self.profile = profile
+    self.dry_run = dry_run
+
+    print("Searching for autoscaling resources")
+
+    self.session = boto3.session.Session(profile_name=self.profile)
+    self.client = self.session.client('autoscaling', region_name=region)
+
+    groups = self.client.describe_auto_scaling_groups()['AutoScalingGroups']
+    for group in groups:
+        if group['AutoScalingGroupName'].startswith('discriminat') or group['AutoScalingGroupName'].startswith('aws-egress'):
+          print("Deleting autoscaling group %s" % group['AutoScalingGroupName'])
+          if self.dry_run is None:
+            self.client.delete_auto_scaling_group(AutoScalingGroupName=group['AutoScalingGroupName'])
+
 class iam:
   def __init__(self, profile, dry_run):
 
@@ -233,5 +263,6 @@ if __name__ == "__main__":
   region = args.region
   dry_run = args.dry_run
 
+  autoscaling(profile, region, dry_run)
   ec2(profile, region, dry_run)
   iam(profile, dry_run)
