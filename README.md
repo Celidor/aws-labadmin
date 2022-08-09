@@ -18,8 +18,15 @@ $ ./destroy-awslab.sh
 # usage - DevSecOps Serverless Lab
 Example for profile "celidor":
 ```
-python delete-serverlesstraining.py --profile celidor --dry_run --dry_run
-python delete-serverlesstraining.py --profile celidor --dry_run
+python delete-serverlesstraining.py --profile celidor --dry_run 
+python delete-serverlesstraining.py --profile celidor
+```
+
+# usage - AWS Egress Lab
+Example for profile "celidor":
+```
+python delete-aws-egress.py --profile celidor --region eu-west-1 --dry_run
+python delete-aws-egress.py --profile celidor --region eu-west-1
 ```
 
 # Create AWS users
