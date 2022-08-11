@@ -225,7 +225,7 @@ class iam:
       allpolicies.extend(response['Policies'])
 
     for role in allroles:
-      if role['RoleName'].startswith('aws-egress'):
+      if role['RoleName'].startswith('aws-egress') or role['RoleName'].startswith('discriminat'):
         #print json.dumps(role, sort_keys=True, indent=2, default=json_serial)
         for role_policy in role ['RolePolicyList']:
           print("Delete inline role policy %s from role %s" % (role_policy['PolicyName'], role['RoleName']))
@@ -247,11 +247,12 @@ class iam:
           self.client.delete_role(RoleName=role['RoleName'])
 
     print("Searching for IAM policies")
+
+    allpolicies = [p for p in allpolicies if (p['PolicyName'].startswith('aws-egress') and p['PolicyName'] != "aws-egress-deploy") or p['PolicyName'].startswith('discriminat')]
     for policy in allpolicies:
-      if policy['PolicyName'].startswith('aws-egress') and policy['PolicyName'] != "aws-egress-deploy":
-        print("Delete policy %s" % (policy['Arn']))
-        if self.dry_run is None:
-          self.client.delete_policy(PolicyArn=policy['Arn'])
+      print("Delete policy %s" % (policy['Arn']))
+      if self.dry_run is None:
+        self.client.delete_policy(PolicyArn=policy['Arn'])
 
 
 class logs:
