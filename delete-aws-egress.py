@@ -89,7 +89,7 @@ class ec2:
     for vpc in vpcs:
       if "Tags" in vpc:
         for tag in vpc['Tags']:
-          if (tag['Key'] == "Name" and tag['Value'].startswith('aws-egress')) or (tag['Key'] == "Name" and tag['Value'].startswith('discrimiNAT')):
+          if (tag['Key'] == "Name" and tag['Value'].startswith('aws-egress')):
             
             acls = self.client.describe_network_acls(Filters=[{'Name': 'vpc-id', 'Values': [ vpc['VpcId'] ] } ])['NetworkAcls']
             for acl in acls:
@@ -129,29 +129,6 @@ class ec2:
                 print("Delete Route Table: %s" % rt['RouteTableId'])
                 if self.dry_run is None:
                   self.client.delete_route_table(RouteTableId=rt['RouteTableId'])
-              vpcp = self.client.describe_vpc_peering_connections(Filters=[{'Name': 'requester-vpc-info.vpc-id', 'Values': [ vpc['VpcId'] ]}])['VpcPeeringConnections']
-              if len(vpcp) > 0:
-                print("Delete vpc peering connection %s" % vpcp[0]['VpcPeeringConnectionId'])
-                if self.dry_run is None:
-                  self.client.delete_vpc_peering_connection(VpcPeeringConnectionId=vpcp[0]['VpcPeeringConnectionId'])
-
-            sgs = self.client.describe_security_groups(Filters=[{'Name': 'vpc-id', 'Values': [ vpc['VpcId'] ] } ])['SecurityGroups']
-            for sg in sgs:
-              if sg['GroupName'].startswith('aws-egress'):
-                #print "=========="
-                #print json.dumps(sg, sort_keys=True, indent=2, default=json_serial)
-                #print "=========="
-                print("Deleting sg %s" % sg['GroupName'])
-                if self.dry_run is None:
-                  for i in range(0, 20):
-                    try:
-                      self.client.delete_security_group(GroupId=sg['GroupId'])
-                      print("deleted %s" % sg['GroupName'])
-                      break
-                    except ClientError as e:
-                      print("retrying: (error: %s)" % e)
-                      time.sleep(10)
-                      continue
 
             subnets = self.client.describe_subnets(Filters=[{'Name': 'vpc-id', 'Values': [ vpc['VpcId'] ] } ])['Subnets']
             for subnet in subnets:
@@ -160,21 +137,37 @@ class ec2:
               if self.dry_run is None:
                 self.client.delete_subnet(SubnetId=subnet['SubnetId'])          
 
-        for vpc in vpcs:
-          if "Tags" in vpc:
-            for tag in vpc['Tags']:
-              if tag['Key'] == "Name" and tag['Value'].startswith('aws-egress'):
-                print("Deleting vpc %s" % vpc['VpcId'])
-                if self.dry_run is None:
-                  for i in range(0, 20):
-                    try:
-                      self.client.delete_vpc(VpcId=vpc['VpcId'])
-                      print("deleted %s" % vpc['VpcId'])
-                      break
-                    except ClientError as e:
-                      print("retrying: (error: %s)" % e)
-                      time.sleep(10)
-                      continue
+            sgs = self.client.describe_security_groups(Filters=[{'Name': 'vpc-id', 'Values': [ vpc['VpcId'] ] } ])['SecurityGroups']
+            for sg in sgs:
+              if "Tags" in sg:
+                for tag in sg['Tags']:
+                  if (tag['Key'] == "Name" and tag['Value'].startswith('aws-egress')):
+                    #print("==========")
+                    #print(json.dumps(sg, sort_keys=True, indent=2, default=json_serial))
+                    #print("==========")
+                    print("Deleting sg %s" % sg['GroupName'])
+                    if self.dry_run is None:
+                      for i in range(0, 20):
+                        try:
+                          self.client.delete_security_group(GroupId=sg['GroupId'])
+                          print("deleted %s" % sg['GroupName'])
+                          break
+                        except ClientError as e:
+                          print("retrying: (error: %s)" % e)
+                          time.sleep(10)
+                          continue
+
+            print("Deleting vpc %s" % vpc['VpcId'])
+            if self.dry_run is None:
+              for i in range(0, 20):
+                try:
+                  self.client.delete_vpc(VpcId=vpc['VpcId'])
+                  print("deleted %s" % vpc['VpcId'])
+                  break
+                except ClientError as e:
+                  print("retrying: (error: %s)" % e)
+                  time.sleep(10)
+                  continue
 
 class autoscaling:
   def __init__(self, profile, region, dry_run):
@@ -245,10 +238,29 @@ class iam:
 
     print("Searching for IAM policies")
     for policy in allpolicies:
-      if policy['PolicyName'].startswith('aws-egress'):
+      if policy['PolicyName'].startswith('aws-egress') and policy['PolicyName'] != "aws-egress-deploy":
         print("Delete policy %s" % (policy['Arn']))
         if self.dry_run is None:
           self.client.delete_policy(PolicyArn=policy['Arn'])
+
+
+class logs:
+  def __init__(self, profile, region, dry_run):
+
+    self.profile = profile
+    self.dry_run = dry_run
+
+    print("Searching for Cloudwatch log groups")
+
+    self.session = boto3.session.Session(profile_name=self.profile)
+    self.client = self.session.client('logs', region_name=region)
+
+    log_groups = self.client.describe_log_groups()['logGroups']
+    for log_group in log_groups:
+        if log_group['logGroupName'].startswith('aws-egress'):
+          print("Deleting Cloudwatch log group %s" % log_group['logGroupName'])
+          if self.dry_run is None:
+            self.client.delete_log_group(logGroupName=log_group['logGroupName'])
 
 if __name__ == "__main__":
 
@@ -263,6 +275,7 @@ if __name__ == "__main__":
   region = args.region
   dry_run = args.dry_run
 
-  autoscaling(profile, region, dry_run)
   ec2(profile, region, dry_run)
+  autoscaling(profile, region, dry_run)
+  logs(profile, region, dry_run)
   iam(profile, dry_run)
