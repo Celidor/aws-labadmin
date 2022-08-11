@@ -92,6 +92,16 @@ class ec2:
               if self.dry_run is None:
                 self.client.release_address(AllocationId=eip['AllocationId'])
 
+    flowlogs = self.client.describe_flow_logs()['FlowLogs']
+    for flowlog in flowlogs:
+        if "Tags" in flowlog:
+          for tag in flowlog['Tags']:
+            if (tag['Key'] == "Name" and tag['Value'].startswith('aws-egress')):
+              print("Deleting flow log %s" % tag['Value'])
+              if self.dry_run is None:
+                self.client.delete_flow_log(FlowLogId=flowlog['FlowLogId'])
+                print("deleted %s" % flowlog['FlowLogId'])
+            
 
     igs = self.client.describe_internet_gateways()['InternetGateways']
     vpcs = self.client.describe_vpcs()['Vpcs']
