@@ -99,7 +99,7 @@ class ec2:
             if (tag['Key'] == "Name" and tag['Value'].startswith('aws-egress')):
               print("Deleting flow log %s" % tag['Value'])
               if self.dry_run is None:
-                self.client.delete_flow_log(FlowLogId=flowlog['FlowLogId'])
+                self.client.delete_flow_logs(FlowLogIds=[flowlog['FlowLogId']])
                 print("deleted %s" % flowlog['FlowLogId'])
             
 
