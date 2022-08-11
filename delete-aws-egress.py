@@ -265,12 +265,11 @@ class logs:
     self.session = boto3.session.Session(profile_name=self.profile)
     self.client = self.session.client('logs', region_name=region)
 
-    log_groups = self.client.describe_log_groups()['logGroups']
+    log_groups = self.client.describe_log_groups(logGroupNamePrefix="/aws-egress")['logGroups']
     for log_group in log_groups:
-        if log_group['logGroupName'].startswith('/aws-egress'):
-          print("Deleting Cloudwatch log group %s" % log_group['logGroupName'])
-          if self.dry_run is None:
-            self.client.delete_log_group(logGroupName=log_group['logGroupName'])
+        print("Deleting Cloudwatch log group %s" % log_group['logGroupName'])
+        if self.dry_run is None:
+          self.client.delete_log_group(logGroupName=log_group['logGroupName'])
 
 if __name__ == "__main__":
 
