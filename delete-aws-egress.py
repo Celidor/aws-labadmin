@@ -83,6 +83,16 @@ class ec2:
                 time.sleep(5)
               time.sleep(20)
 
+    eips = self.client.describe_addresses()['Addresses']
+    for eip in eips:
+        if "Tags" in eip:
+          for tag in eip['Tags']:
+            if tag['Key'] == "Name" and tag['Value'].startswith('aws-egress'):      
+              print("Releasing Elastic IP %s" % tag['Value'])
+              if self.dry_run is None:
+                self.client.release_address(AllocationId=eip['AllocationId'])
+
+
     igs = self.client.describe_internet_gateways()['InternetGateways']
     vpcs = self.client.describe_vpcs()['Vpcs']
 
