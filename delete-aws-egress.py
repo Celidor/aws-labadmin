@@ -48,7 +48,7 @@ class ec2:
                 self.client.terminate_instances(InstanceIds=[ inst['InstanceId'] ])
                 while self.client.describe_instances(InstanceIds=[ inst['InstanceId'] ])['Reservations'][0]['Instances'][0]['State']['Name'] != 'terminated': print("waiting for instance termination..")
                 time.sleep(5)
-              time.sleep(20)
+              #time.sleep(20)
 
     gateways = self.client.describe_nat_gateways()['NatGateways']
     for gateway in gateways:
@@ -60,7 +60,7 @@ class ec2:
                 self.client.delete_nat_gateway(NatGatewayId=gateway['NatGatewayId'])
                 while self.client.describe_nat_gateways(NatGatewayIds=[gateway['NatGatewayId']])['NatGateways'][0]['State'] != 'deleted': print("waiting for NAT Gateway deletion..")
                 time.sleep(5)
-              time.sleep(20)
+              #time.sleep(20)
 
     nics = self.client.describe_network_interfaces()['NetworkInterfaces']
     for nic in nics:
@@ -81,7 +81,7 @@ class ec2:
                 self.client.delete_vpc_endpoints(VpcEndpointIds=[endpoint['VpcEndpointId']])
                 while self.client.describe_vpc_endpoints(VpcEndpointIds=[endpoint['VpcEndpointId']])['VpcEndpoints'][0]['State'] != 'deleted': print("waiting for VPC Endpoint deletion..")
                 time.sleep(5)
-              time.sleep(20)
+              #time.sleep(20)
 
     eips = self.client.describe_addresses()['Addresses']
     for eip in eips:
