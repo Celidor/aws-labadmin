@@ -7,3 +7,6 @@ user-passwords.sh
 
 # Other
 .DS_Store
+
+# Python
+.venv
